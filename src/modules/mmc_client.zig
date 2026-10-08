@@ -732,7 +732,30 @@ pub fn init(gpa: std.mem.Allocator, _: std.Io, c: Config) !void {
             .execute = &commands.servo_off.impl,
         },
     });
-    errdefer _ = command.registry.orderedRemove("RELEASE_CARRIER");
+    errdefer _ = command.registry.orderedRemove("SERVO_OFF");
+    try command.registry.put(gpa, "SERVO_ON", .{
+        .executable = .{
+            .name = "SERVO_ON",
+            .parameters = &[_]command.Command.Executable.Parameter{
+                .{ .name = "Line", .kind = .mmc_client_line },
+                .{ .name = "Axes", .kind = .mmc_client_axis, .optional = true },
+            },
+            .short_description = "Turn servo on to start motor control",
+            .long_description = std.fmt.comptimePrint(
+                \\Start motor control of all motors in a line, prohibiting initialized
+                \\Carrier(s) to be moved by external force. Carrier stays initialized.
+                \\Optional: Provide Axis to specify Carrier to capture.
+                \\
+                \\Example: Capture Carrier on Line "line1".
+                \\SERVO_ON line1
+                \\
+                \\Example: Capture Carrier on Axis "2" on Line "line1".
+                \\SERVO_ON line1 2
+            , .{}),
+            .execute = &commands.servo_on.impl,
+        },
+    });
+    errdefer _ = command.registry.orderedRemove("SERVO_ON");
     // Temporarily deprecated since API 3.1.0
     // try command.registry.put(gpa, "AUTO_INITIALIZE", .{
     //     .executable = .{
@@ -766,62 +789,6 @@ pub fn init(gpa: std.mem.Allocator, _: std.Io, c: Config) !void {
     //     },
     // });
     // errdefer _ = command.registry.orderedRemove("AUTO_INITIALIZE");
-    errdefer _ = command.registry.orderedRemove("SERVO_OFF");
-    try command.registry.put(gpa, "SERVO_ON", .{
-        .executable = .{
-            .name = "SERVO_ON",
-            .parameters = &[_]command.Command.Executable.Parameter{
-                .{ .name = "Line", .kind = .mmc_client_line },
-                .{ .name = "Axes", .kind = .mmc_client_axis, .optional = true },
-            },
-            .short_description = "Turn servo on to start motor control",
-            .long_description = std.fmt.comptimePrint(
-                \\Start motor control of all motors in a line, prohibiting initialized
-                \\Carrier(s) to be moved by external force. Carrier stays initialized.
-                \\Optional: Provide Axis to specify Carrier to capture.
-                \\
-                \\Example: Capture Carrier on Line "line1".
-                \\SERVO_ON line1
-                \\
-                \\Example: Capture Carrier on Axis "2" on Line "line1".
-                \\SERVO_ON line1 2
-            , .{}),
-            .execute = &commands.servo_on.impl,
-        },
-    });
-    errdefer _ = command.registry.orderedRemove("SERVO_ON");
-    try command.registry.put(gpa, "AUTO_INITIALIZE", .{
-        .executable = .{
-            .name = "AUTO_INITIALIZE",
-            .parameters = &[_]command.Command.Executable.Parameter{
-                .{
-                    .name = "Line(s)",
-                    .optional = true,
-                    .kind = .mmc_client_line,
-                },
-            },
-            .short_description = "Initialize all Carriers automatically.",
-            .long_description = std.fmt.comptimePrint(
-                \\Automatically initializes all uninitialized Carriers. This process
-                \\operates on carrier clusters, where a cluster is defined as a group of
-                \\uninitialized Carriers located on adjacent Axis. Each cluster requires
-                \\at least one free Axis to successfully initialize cluster. Multiple
-                \\Line auto initialization is supported (e.g., line1,line2,line3). If
-                \\Line is not provided, auto initializes Carriers on all Lines.
-                \\
-                \\Example: Auto initialize Carrier(s) on all Lines.
-                \\AUTO_INITIALIZE
-                \\
-                \\Example: Auto initialize Carrier(s) on Line "line1".
-                \\AUTO_INITIALIZE line1
-                \\
-                \\Example: Auto initialize Carrier(s) on Line "line1" and "line2".
-                \\AUTO_INITIALIZE line1,line2
-            , .{}),
-            .execute = &commands.auto_initialize.impl,
-        },
-    });
-    errdefer _ = command.registry.orderedRemove("AUTO_INITIALIZE");
     try command.registry.put(gpa, "CALIBRATE", .{
         .executable = .{
             .name = "CALIBRATE",

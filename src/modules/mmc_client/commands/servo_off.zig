@@ -13,10 +13,10 @@ pub fn impl(io: std.Io, gpa: std.mem.Allocator, params: [][]const u8) !void {
     const line_name: []const u8 = params[0];
     const line_idx = try client.matchLine(line_name);
     const line = client.lines[line_idx];
-    const axis_id: ?u32 = if (params[1].len > 0)
-        try std.fmt.parseUnsigned(u32, params[1], 0)
-    else
-        null;
+    var filter: ?client.Filter = null;
+    if (params[1].len > 0) {
+        filter = try .parse(params[1]);
+    }
 
     const request: api.protobuf.mmc.Request = .{
         .body = .{
@@ -24,10 +24,17 @@ pub fn impl(io: std.Io, gpa: std.mem.Allocator, params: [][]const u8) !void {
                 .body = .{
                     .servo_off = .{
                         .line = line.id,
-                        .axes = if (axis_id) |id|
-                            .{ .start = id, .end = id }
-                        else
-                            null,
+                        .target = if (filter) |f| b: switch (f) {
+                            .axis => |axis| break :b .{
+                                .axes = .{ .start = axis, .end = axis },
+                            },
+                            .driver => |driver| break :b .{
+                                .drivers = .{ .start = driver, .end = driver },
+                            },
+                            .carrier => |carrier| break :b .{
+                                .carrier = carrier[0],
+                            },
+                        } else null,
                     },
                 },
             },
