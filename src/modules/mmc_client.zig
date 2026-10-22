@@ -715,19 +715,19 @@ pub fn init(gpa: std.mem.Allocator, _: std.Io, c: Config) !void {
             .name = "SERVO_OFF",
             .parameters = &[_]command.Command.Executable.Parameter{
                 .{ .name = "Line", .kind = .mmc_client_line },
-                .{ .name = "Axes", .kind = .mmc_client_axis, .optional = true },
+                .{ .name = "filter", .kind = .mmc_client_filter, .optional = true },
             },
             .short_description = "Turn servo off to release motor control",
             .long_description = std.fmt.comptimePrint(
                 \\Release motor control of all motors in a line, allowing to move
                 \\Carrier(s) through external force. Carrier stays initialized.
-                \\Optional: Provide Axis to specify Carrier to release.
+                \\Optional: Provide a filter to specify Axes to release.
                 \\
                 \\Example: Release Carrier on Line "line1".
                 \\SERVO_OFF line1
                 \\
-                \\Example: Release Carrier on Driver "2" on Line "line1".
-                \\SERVO_OFF line1 2
+                \\Example: Release all Carrier on Driver "2" on Line "line1".
+                \\SERVO_OFF line1 2d
             , .{}),
             .execute = &commands.servo_off.impl,
         },
@@ -738,19 +738,20 @@ pub fn init(gpa: std.mem.Allocator, _: std.Io, c: Config) !void {
             .name = "SERVO_ON",
             .parameters = &[_]command.Command.Executable.Parameter{
                 .{ .name = "Line", .kind = .mmc_client_line },
-                .{ .name = "Axes", .kind = .mmc_client_axis, .optional = true },
+                .{ .name = "filter", .kind = .mmc_client_filter, .optional = true },
             },
             .short_description = "Turn servo on to start motor control",
             .long_description = std.fmt.comptimePrint(
                 \\Start motor control of all motors in a line, prohibiting initialized
                 \\Carrier(s) to be moved by external force. Carrier stays initialized.
-                \\Optional: Provide Axis to specify Carrier to capture.
+                \\Optional: Provide a filter to specify Axes to capture initialized
+                \\Carrier(s).
                 \\
                 \\Example: Capture Carrier on Line "line1".
                 \\SERVO_ON line1
                 \\
                 \\Example: Capture Carrier on Axis "2" on Line "line1".
-                \\SERVO_ON line1 2
+                \\SERVO_ON line1 2a
             , .{}),
             .execute = &commands.servo_on.impl,
         },

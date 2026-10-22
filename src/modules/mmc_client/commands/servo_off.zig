@@ -13,10 +13,10 @@ pub fn impl(io: std.Io, gpa: std.mem.Allocator, params: [][]const u8) !void {
     const line_name: []const u8 = params[0];
     const line_idx = try client.matchLine(line_name);
     const line = client.lines[line_idx];
-    var filter: ?client.Filter = null;
-    if (params[1].len > 0) {
-        filter = try .parse(params[1]);
-    }
+    const filter: ?client.Filter = if (params[1].len > 0)
+        try .parse(params[1])
+    else
+        null;
 
     const request: api.protobuf.mmc.Request = .{
         .body = .{
