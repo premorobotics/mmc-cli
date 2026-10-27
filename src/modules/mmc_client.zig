@@ -722,6 +722,10 @@ pub fn init(gpa: std.mem.Allocator, _: std.Io, c: Config) !void {
                 \\Release motor control of all motors in a line, allowing to move
                 \\Carrier(s) through external force. Carrier stays initialized.
                 \\Optional: Provide a filter to specify Axes to release.
+                \\Supported suffixes are:
+                \\ - "a" or "axis" to filter by Axis
+                \\ - "c" or "Carrier" to filter by Carrier
+                \\ - "d" or "driver" to filter by Driver
                 \\
                 \\Example: Release Carrier on Line "line1".
                 \\SERVO_OFF line1
@@ -745,7 +749,10 @@ pub fn init(gpa: std.mem.Allocator, _: std.Io, c: Config) !void {
                 \\Start motor control of all motors in a line, prohibiting initialized
                 \\Carrier(s) to be moved by external force. Carrier stays initialized.
                 \\Optional: Provide a filter to specify Axes to capture initialized
-                \\Carrier(s).
+                \\Carrier(s). Supported suffixes are:
+                \\ - "a" or "axis" to filter by Axis
+                \\ - "c" or "Carrier" to filter by Carrier
+                \\ - "d" or "driver" to filter by Driver
                 \\
                 \\Example: Capture Carrier on Line "line1".
                 \\SERVO_ON line1
