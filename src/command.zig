@@ -501,6 +501,15 @@ pub fn init(
         ,
         .execute = &printVariables,
     } });
+    try registry.put(gpa, "ECHO", .{ .executable = .{
+        .name = "ECHO",
+        .parameters = &.{
+            .{ .name = "text", .resolve = true, .rest = true },
+        },
+        .short_description = "Print the provided text.",
+        .long_description = "Print all provided text to the terminal output.",
+        .execute = &echo,
+    } });
     try registry.put(gpa, "TABLE_RESET", .{ .executable = .{
         .name = "TABLE_RESET",
         .short_description = "Fully reset global table to be empty.",
@@ -755,6 +764,12 @@ fn endGroup(io: std.Io, gpa: std.mem.Allocator, _: [][]const u8) !void {
     grouping = false;
     // TODO: Currently, only supports two command in mmc_client
     try mmc_client.commands.group.impl(io, gpa);
+}
+
+fn echo(_: std.Io, _: std.mem.Allocator, params: [][]const u8) !void {
+    if (params.len == 0) return;
+
+    std.log.info("{s}\n", .{params[0]});
 }
 
 fn help(_: std.Io, _: std.mem.Allocator, params: [][]const u8) !void {
