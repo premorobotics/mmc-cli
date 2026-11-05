@@ -859,6 +859,8 @@ fn version(_: std.Io, _: std.mem.Allocator, _: [][]const u8) !void {
 fn set(_: std.Io, _: std.mem.Allocator, params: [][]const u8) !void {
     if (!std.ascii.isAlphabetic(params[0][0])) return error.InvalidParameter;
     const name: []const u8 = params[0];
+
+    // Exclude specific variable name values
     for (mmc_client.lines) |line| {
         if (std.mem.eql(u8, line.name, name)) {
             std.log.err("\"{s}\" has been used as line name", .{name});
@@ -866,6 +868,16 @@ fn set(_: std.Io, _: std.mem.Allocator, params: [][]const u8) !void {
             return error.InvalidVariableName;
         }
     }
+    if(name.len == 1){
+        for ("acdl") |exclude| { //axes, carrier, driver/distance, location
+            if(exclude == name[0]){
+                std.log.err("\"{s}\" is a filter suffix and cannot be used as a variable!", .{name});
+                // Return an error if variable name is used as a filter suffix
+                return error.InvalidVariableName;
+            }
+        }
+    }
+
     const value: []const u8 = params[1];
     var result: []const u8 = &.{};
 
