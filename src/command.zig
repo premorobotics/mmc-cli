@@ -868,9 +868,9 @@ fn set(_: std.Io, _: std.mem.Allocator, params: [][]const u8) !void {
             return error.InvalidVariableName;
         }
     }
-    if(name.len == 1){
+    if (name.len == 1) {
         for ("acdl") |exclude| { //axes, carrier, driver/distance, location
-            if(exclude == name[0]){
+            if (exclude == name[0]) {
                 std.log.err("\"{s}\" is a filter suffix and cannot be used as a variable!", .{name});
                 // Return an error if variable name is used as a filter suffix
                 return error.InvalidVariableName;
@@ -883,14 +883,22 @@ fn set(_: std.Io, _: std.mem.Allocator, params: [][]const u8) !void {
 
     if (value[0] == '=') {
         // Compute and assign
+        // `buf` can hold the max output of calc() plus an optional filter suffix
         var buf: [
-            std.fmt.float.bufferSize(.decimal, @TypeOf(try calc("1")))
+            std.fmt.float.bufferSize(.decimal, @FieldType(CalcResult, "value")) + 1
         ]u8 = undefined;
+
         const res = try calc(value[1..]);
-        result = if (res == @round(res))
-            try std.fmt.bufPrint(&buf, "{d:.0}", .{res})
+        result = if (res.value == @round(res.value))
+            if (res.suffix) |s|
+                try std.fmt.bufPrint(&buf, "{d:.0}{c}", .{ res.value, s })
+            else
+                try std.fmt.bufPrint(&buf, "{d:.0}", .{ res.value })
         else
-            try std.fmt.bufPrint(&buf, "{d:.2}", .{res});
+            if (res.suffix) |s|
+                try std.fmt.bufPrint(&buf, "{d:.2}{c}", .{ res.value, s })
+            else
+                try std.fmt.bufPrint(&buf, "{d:.2}", .{ res.value });
     } else {
         // Simple assign
         result = std.mem.trimEnd(u8, value, &std.ascii.whitespace);
@@ -911,9 +919,15 @@ const CalcError = error{
     InvalidVariableValue,
 };
 
+const CalcResult = struct {
+    value: f32,
+    suffix: ?u8 = null,
+};
+
 const CalcParser = struct {
     input: []const u8,
     pos: usize = 0,
+    suffix: ?u8 = null,
 
     /// Returns a slice of the current character, or null when end of input is
     /// reached. Does not advance to next character.
@@ -935,6 +949,23 @@ const CalcParser = struct {
             return true;
         }
         return false;
+    }
+
+    fn addSuffix(self: *CalcParser, suffix: u8) CalcError!void {
+        if (self.suffix) |s| {
+            if (s != suffix) return error.InvalidCharacter;
+        } else {
+            self.suffix = suffix;
+        }
+    }
+
+    fn parseSuffix(self: *CalcParser) CalcError!void {
+        if (self.peek()) |c| {
+            if (std.mem.indexOfScalar(u8, "acdl", c) != null) {
+                self.pos += 1;
+                try self.addSuffix(c);
+            }
+        }
     }
 
     /// Parse addition and substraction
@@ -1018,8 +1049,11 @@ const CalcParser = struct {
 
         if (self.pos == start) return error.ExpectedNumber;
 
-        return std.fmt.parseFloat(f32, self.input[start..self.pos]) catch
+        const value = std.fmt.parseFloat(f32, self.input[start..self.pos]) catch
             return error.ExpectedNumber;
+
+        try self.parseSuffix();
+        return value;
     }
 
     fn parseVariable(self: *CalcParser) CalcError!f32 {
@@ -1039,40 +1073,55 @@ const CalcParser = struct {
             return error.UndefinedVariable;
         std.log.debug("{s}: {s}", .{ name, value_string });
 
-        return std.fmt.parseFloat(f32, value_string) catch {
+        var value_end = value_string.len;
+        if (value_end > 0 and
+            std.mem.indexOfScalar(u8, "acdl", value_string[value_end - 1]) != null)
+        {
+            value_end -= 1;
+            try self.addSuffix(value_string[value_end]);
+        }
+
+        return std.fmt.parseFloat(f32, value_string[0..value_end]) catch {
             return error.InvalidVariableValue;
         };
     }
 };
 
-pub fn calc(input: []const u8) CalcError!f32 {
+/// Evaluates math expressions
+/// Supports addition, subtraction, multiplication, division, modulo, parentheses,
+/// unary, resolving variables and suffixes (`a, c, d, l`) are preserved.
+pub fn calc(input: []const u8) CalcError!CalcResult {
     var parser = CalcParser{ .input = input };
 
     const value = try parser.parseExpression();
 
     parser.skipSpaces();
     if (parser.pos != parser.input.len) return error.TrailingCharacters;
-    return value;
+
+    return .{
+        .value = value,
+        .suffix = parser.suffix,
+    };
 }
 
 test "calc" {
-    try std.testing.expectEqual(14, calc("2 + 3 * 4"));
-    try std.testing.expectEqual(30, calc("    20 + 5 * 2 "));
-    try std.testing.expectEqual(5, calc("17 % 5 + 6 / 2"));
-    try std.testing.expectEqual(5, calc("17%5+6/2"));
-    try std.testing.expectEqual(0.375, calc("1/8 + 2/8"));
-    try std.testing.expectEqual(72, calc("(2+2)*2*(3+3*2)"));
-    try std.testing.expectEqual(12, calc("2 + 2 (3 + 2)"));
-    try std.testing.expectEqual(24, calc("(1+1) (3 + 1)(2+ 3/3)"));
-    try std.testing.expectEqual(0.1, calc(".1"));
-    try std.testing.expectEqual(0.1, calc("0.1"));
-    try std.testing.expectEqual(1.25, calc("1.25"));
-    try std.testing.expectEqual(100.25, calc("100.25"));
-    try std.testing.expectEqual(1, calc("1."));
-    try std.testing.expectEqual(2.5, calc(".5 + 2"));
-    try std.testing.expectEqual(14, calc("2 - -3 * 4"));
-    try std.testing.expectEqual(14, calc("2 --3 * 4"));
-    try std.testing.expectEqual(14, calc("2 - (-3) * 4"));
+    try std.testing.expectEqual(14, (try calc("2 + 3 * 4")).value);
+    try std.testing.expectEqual(30, (try calc("    20 + 5 * 2 ")).value);
+    try std.testing.expectEqual(5, (try calc("17 % 5 + 6 / 2")).value);
+    try std.testing.expectEqual(5, (try calc("17%5+6/2")).value);
+    try std.testing.expectEqual(0.375, (try calc("1/8 + 2/8")).value);
+    try std.testing.expectEqual(72, (try calc("(2+2)*2*(3+3*2)")).value);
+    try std.testing.expectEqual(12, (try calc("2 + 2 (3 + 2)")).value);
+    try std.testing.expectEqual(24, (try calc("(1+1) (3 + 1)(2+ 3/3)")).value);
+    try std.testing.expectEqual(0.1, (try calc(".1")).value);
+    try std.testing.expectEqual(0.1, (try calc("0.1")).value);
+    try std.testing.expectEqual(1.25, (try calc("1.25")).value);
+    try std.testing.expectEqual(100.25, (try calc("100.25")).value);
+    try std.testing.expectEqual(1, (try calc("1.")).value);
+    try std.testing.expectEqual(2.5, (try calc(".5 + 2")).value);
+    try std.testing.expectEqual(14, (try calc("2 - -3 * 4")).value);
+    try std.testing.expectEqual(14, (try calc("2 --3 * 4")).value);
+    try std.testing.expectEqual(14, (try calc("2 - (-3) * 4")).value);
 
     try std.testing.expectError(error.DivisionByZero, calc("2/0"));
     try std.testing.expectError(error.DivisionByZero, calc("2%0"));
