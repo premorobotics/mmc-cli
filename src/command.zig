@@ -893,12 +893,11 @@ fn set(_: std.Io, _: std.mem.Allocator, params: [][]const u8) !void {
             if (res.suffix) |s|
                 try std.fmt.bufPrint(&buf, "{d:.0}{c}", .{ res.value, s })
             else
-                try std.fmt.bufPrint(&buf, "{d:.0}", .{ res.value })
+                try std.fmt.bufPrint(&buf, "{d:.0}", .{res.value})
+        else if (res.suffix) |s|
+            try std.fmt.bufPrint(&buf, "{d:.2}{c}", .{ res.value, s })
         else
-            if (res.suffix) |s|
-                try std.fmt.bufPrint(&buf, "{d:.2}{c}", .{ res.value, s })
-            else
-                try std.fmt.bufPrint(&buf, "{d:.2}", .{ res.value });
+            try std.fmt.bufPrint(&buf, "{d:.2}", .{res.value});
     } else {
         // Simple assign
         result = std.mem.trimEnd(u8, value, &std.ascii.whitespace);
