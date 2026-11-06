@@ -1122,6 +1122,11 @@ test "calc" {
     try std.testing.expectEqual(14, (try calc("2 - -3 * 4")).value);
     try std.testing.expectEqual(14, (try calc("2 --3 * 4")).value);
     try std.testing.expectEqual(14, (try calc("2 - (-3) * 4")).value);
+    try std.testing.expectEqual(1, (try calc("1a")).value);
+    try std.testing.expectEqual(1, (try calc("1c")).value);
+    try std.testing.expectEqual(1, (try calc("1d")).value);
+    try std.testing.expectEqual(1, (try calc("1l")).value);
+    try std.testing.expectEqual('a', (try calc("1a")).suffix);
 
     try std.testing.expectError(error.DivisionByZero, calc("2/0"));
     try std.testing.expectError(error.DivisionByZero, calc("2%0"));
@@ -1138,6 +1143,7 @@ test "calc" {
     try std.testing.expectError(error.ExpectedNumber, calc(". + 1"));
     try std.testing.expectError(error.ExpectedNumber, calc("1.."));
     try std.testing.expectError(error.ExpectedNumber, calc("1.2.3"));
+    try std.testing.expectError(error.InvalidCharacter, calc("1a + 1d"));
 }
 
 fn get(_: std.Io, _: std.mem.Allocator, params: [][]const u8) !void {
