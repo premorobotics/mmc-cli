@@ -868,15 +868,6 @@ fn set(_: std.Io, _: std.mem.Allocator, params: [][]const u8) !void {
             return error.InvalidVariableName;
         }
     }
-    if (name.len == 1) {
-        for ("acdl") |exclude| { //axes, carrier, driver/distance, location
-            if (exclude == name[0]) {
-                std.log.err("\"{s}\" is a filter suffix and cannot be used as a variable!", .{name});
-                // Return an error if variable name is used as a filter suffix
-                return error.InvalidVariableName;
-            }
-        }
-    }
 
     const value: []const u8 = params[1];
     var result: []const u8 = &.{};
@@ -1068,21 +1059,32 @@ const CalcParser = struct {
                 '_' == self.input[self.pos])) self.pos += 1;
 
         const name = self.input[start..self.pos];
-        const value_string = variables.get(name) orelse
-            return error.UndefinedVariable;
-        std.log.debug("{s}: {s}", .{ name, value_string });
 
-        var value_end = value_string.len;
-        if (value_end > 0 and
-            std.mem.indexOfScalar(u8, "acdl", value_string[value_end - 1]) != null)
+        std.log.debug("peek() '{c}'", .{if (self.peek()) |c| c else '!'});
+
+        if (start == 0 or
+            start > 0 and self.input[start - 1] == ' ' and
+                (self.peek() == null or self.peek() == ' '))
         {
-            value_end -= 1;
-            try self.addSuffix(value_string[value_end]);
-        }
+            std.log.debug("self.input[]: '{s}'", .{self.input[start..self.pos]});
 
-        return std.fmt.parseFloat(f32, value_string[0..value_end]) catch {
-            return error.InvalidVariableValue;
-        };
+            const value_string = variables.get(name) orelse
+                return error.UndefinedVariable;
+            std.log.debug("{s}: {s}", .{ name, value_string });
+
+            // Check is resolved Variable includes suffix
+            var value_end = value_string.len;
+            if (value_end > 0 and
+                std.mem.indexOfScalar(u8, "acdl", value_string[value_end - 1]) != null)
+            {
+                value_end -= 1;
+                try self.addSuffix(value_string[value_end]);
+            }
+
+            return std.fmt.parseFloat(f32, value_string[0..value_end]) catch
+                return error.InvalidVariableValue;
+        }
+        return error.InvalidVariableValue;
     }
 };
 
