@@ -1046,6 +1046,9 @@ const CalcParser = struct {
         return value;
     }
 
+    /// Parses Variables
+    /// Variables have to be seperated from operation characters (`+, - , *, /, %`)
+    /// and numbers. This ensured correct color coding in the CLI.
     fn parseVariable(self: *CalcParser) CalcError!f32 {
         self.skipSpaces();
         const start = self.pos;
