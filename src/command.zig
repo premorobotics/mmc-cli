@@ -1063,17 +1063,12 @@ const CalcParser = struct {
 
         const name = self.input[start..self.pos];
 
-        std.log.debug("peek() '{c}'", .{if (self.peek()) |c| c else '!'});
-
         if (start == 0 or
             start > 0 and self.input[start - 1] == ' ' and
                 (self.peek() == null or self.peek() == ' '))
         {
-            std.log.debug("self.input[]: '{s}'", .{self.input[start..self.pos]});
-
             const value_string = variables.get(name) orelse
                 return error.UndefinedVariable;
-            std.log.debug("{s}: {s}", .{ name, value_string });
 
             // Check is resolved Variable includes suffix
             var value_end = value_string.len;
