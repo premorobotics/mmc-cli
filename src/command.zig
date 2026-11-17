@@ -617,8 +617,8 @@ pub fn init(
         .name = "EXIT",
         .short_description = "Exit the MMC command line utility.",
         .long_description =
-        \\Gracefully terminate the PMF MMC command line utility, cleaning up
-        \\resources and closing connections.
+        \\Gracefully terminate the Premo Robotics MMC command line utility,
+        \\cleaning up resources and closing connections.
         ,
         .execute = &exit,
     } });
